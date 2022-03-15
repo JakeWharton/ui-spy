@@ -11,6 +11,7 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.switch
+import java.io.IOException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.async
@@ -42,6 +43,14 @@ private class UiSpyCommand : CliktCommand(name = "ui-spy") {
 		.help("IFTTT webhook URL to trigger (see https://ifttt.com/maker_webhooks)")
 		.convert { it.toHttpUrl() }
 
+	private val healthCheckHost by option("--hc-host", metavar = "URL")
+		.help("Alternate host for --healthcheck notification")
+		.convert { it.toHttpUrl() }
+		.default("https://hc-ping.com".toHttpUrl())
+
+	private val healthCheckId by option("--hc", metavar = "ID")
+		.help("ID of https://healthchecks.io/ to notify")
+
 	private val handles by argument(name = "IDs")
 		.help("Product IDs to watch for availability")
 		.multiple(required = true)
@@ -54,6 +63,13 @@ private class UiSpyCommand : CliktCommand(name = "ui-spy") {
 				}
 			}
 			.build()
+
+		val healthCheck = healthCheckId?.let { healthCheckId ->
+			HttpHealthCheck(
+				okhttp = okhttp,
+				checkUrl = healthCheckHost.newBuilder().addPathSegment(healthCheckId).build(),
+			)
+		} ?: NullHealthCheck
 
 		val notifier = buildList {
 			add(ConsoleProductNotifier)
@@ -76,28 +92,38 @@ private class UiSpyCommand : CliktCommand(name = "ui-spy") {
 			var available: Boolean? = null
 
 			while (true) {
-				val allProducts = listOf(
-					async { loadProducts("https://store.ui.com/collections/unifi-network-unifi-os-consoles/products.json") },
-					async { loadProducts("https://store.ui.com/collections/unifi-network-switching/products.json") },
-					async { loadProducts("https://store.ui.com/collections/unifi-network-routing-offload/products.json") },
-					async { loadProducts("https://store.ui.com/collections/unifi-network-wireless/products.json") },
-					async { loadProducts("https://store.ui.com/collections/unifi-protect/products.json") },
-					async { loadProducts("https://store.ui.com/collections/unifi-door-access/products.json") },
-					async { loadProducts("https://store.ui.com/collections/unifi-accessories/products.json") },
-					async { loadProducts("https://store.ui.com/collections/unifi-connect/products.json") },
-					async { loadProducts("https://store.ui.com/collections/unifi-phone-system/products.json") },
-					async { loadProducts("https://store.ui.com/collections/operator-airmax-and-ltu/products.json") },
-					async { loadProducts("https://store.ui.com/collections/operator-isp-infrastructure/products.json") },
-					async { loadProducts("https://store.ui.com/collections/early-access/products.json") },
-				).awaitAll().flatten().associateBy { it.handle }
+				healthCheck.notifyStart()
 
-				val variants = handles.mapNotNull { allProducts[it]?.variants?.first() }
-				debug.log(variants.toString())
+				try {
+					val allProducts = listOf(
+						async { loadProducts("https://store.ui.com/collections/unifi-network-unifi-os-consoles/products.json") },
+						async { loadProducts("https://store.ui.com/collections/unifi-network-switching/products.json") },
+						async { loadProducts("https://store.ui.com/collections/unifi-network-routing-offload/products.json") },
+						async { loadProducts("https://store.ui.com/collections/unifi-network-wireless/products.json") },
+						async { loadProducts("https://store.ui.com/collections/unifi-protect/products.json") },
+						async { loadProducts("https://store.ui.com/collections/unifi-door-access/products.json") },
+						async { loadProducts("https://store.ui.com/collections/unifi-accessories/products.json") },
+						async { loadProducts("https://store.ui.com/collections/unifi-connect/products.json") },
+						async { loadProducts("https://store.ui.com/collections/unifi-phone-system/products.json") },
+						async { loadProducts("https://store.ui.com/collections/operator-airmax-and-ltu/products.json") },
+						async { loadProducts("https://store.ui.com/collections/operator-isp-infrastructure/products.json") },
+						async { loadProducts("https://store.ui.com/collections/early-access/products.json") },
+					).awaitAll().flatten().associateBy { it.handle }
 
-				val allVariantsAvailable = variants.all { it.available }
-				if (allVariantsAvailable != available) {
-					available = allVariantsAvailable
-					notifier.notify("Items", allVariantsAvailable, null)
+					val variants = handles.mapNotNull { allProducts[it]?.variants?.first() }
+					debug.log(variants.toString())
+
+					val allVariantsAvailable = variants.all { it.available }
+					if (allVariantsAvailable != available) {
+						available = allVariantsAvailable
+						notifier.notify("Items", allVariantsAvailable, null)
+					}
+
+					healthCheck.notifySuccess()
+				} catch (e: HttpException) {
+					healthCheck.notifyFail()
+				} catch (e: IOException) {
+					healthCheck.notifyFail()
 				}
 
 				delay(checkInterval)
