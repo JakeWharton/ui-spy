@@ -16,7 +16,7 @@ class HttpHealthCheck(
 	private val checkUrl: HttpUrl,
 ) : HealthCheck {
 	private val startUrl = checkUrl.newBuilder().addPathSegment("start").build()
-	private val failUrl = checkUrl.newBuilder().addPathSegment("start").build()
+	private val failUrl = checkUrl.newBuilder().addPathSegment("fail").build()
 
 	override suspend fun notifyStart() = notify(startUrl)
 	override suspend fun notifySuccess() = notify(checkUrl)
