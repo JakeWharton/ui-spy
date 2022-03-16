@@ -11,7 +11,6 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.switch
-import java.io.IOException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.async
@@ -44,7 +43,7 @@ private class UiSpyCommand : CliktCommand(name = "ui-spy") {
 		.convert { it.toHttpUrl() }
 
 	private val healthCheckHost by option("--hc-host", metavar = "URL")
-		.help("Alternate host for --healthcheck notification")
+		.help("Alternate host for health check notification")
 		.convert { it.toHttpUrl() }
 		.default("https://hc-ping.com".toHttpUrl())
 
@@ -94,6 +93,7 @@ private class UiSpyCommand : CliktCommand(name = "ui-spy") {
 			while (true) {
 				healthCheck.notifyStart()
 
+				var success = false
 				try {
 					val allProducts = listOf(
 						async { loadProducts("https://store.ui.com/collections/unifi-network-unifi-os-consoles/products.json") },
@@ -119,11 +119,13 @@ private class UiSpyCommand : CliktCommand(name = "ui-spy") {
 						notifier.notify("Items", allVariantsAvailable, null)
 					}
 
-					healthCheck.notifySuccess()
-				} catch (e: HttpException) {
-					healthCheck.notifyFail()
-				} catch (e: IOException) {
-					healthCheck.notifyFail()
+					success = true
+				} finally {
+					if (success) {
+						healthCheck.notifySuccess()
+					} else {
+						healthCheck.notifyFail()
+					}
 				}
 
 				delay(checkInterval)
