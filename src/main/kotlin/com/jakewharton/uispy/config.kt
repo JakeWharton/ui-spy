@@ -24,7 +24,7 @@ data class Config(
 		private val serializer = Toml
 
 		fun parseToml(toml: String): Config {
-			return serializer.decodeFromString(Config.serializer(), toml)
+			return serializer.decodeFromString(serializer(), toml)
 		}
 	}
 }

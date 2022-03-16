@@ -1,6 +1,7 @@
 package com.jakewharton.uispy
 
 import java.nio.file.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.createFile
 import kotlin.io.path.deleteExisting
 import kotlin.io.path.exists
@@ -25,6 +26,10 @@ class InMemoryDatabase : Database {
 }
 
 class FileSystemDatabase(private val root: Path) : Database {
+	init {
+		root.createDirectories()
+	}
+
 	override fun isProductAvailable(handle: String): Boolean {
 		return path(handle).exists()
 	}
