@@ -1,56 +1,37 @@
 package com.jakewharton.uispy
 
-import com.akuleshov7.ktoml.Toml
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind.STRING
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import org.tomlj.Toml
+import org.tomlj.TomlArray
 
-@Serializable
 data class Config(
-	@Serializable(HttpUrlSerializer::class)
 	val ifttt: HttpUrl? = null,
-	@Serializable(IsoDurationSerializer::class)
 	val checkInterval: Duration = 1.minutes,
-	@Serializable(HttpUrlSerializer::class)
 	val store: HttpUrl = "https://store.ui.com".toHttpUrl(),
 	val items: List<String>,
 ) {
 	companion object {
-		private val serializer = Toml
-
 		fun parseToml(toml: String): Config {
-			return serializer.decodeFromString(serializer(), toml)
+			val parseResult = Toml.parse(toml)
+			require(!parseResult.hasErrors()) {
+				"Unable to parse TOML config:\n\n * " + parseResult.errors().joinToString("\n *")
+			}
+			return Config(
+				ifttt = parseResult.getString("ifttt")?.toHttpUrl(),
+				checkInterval = parseResult.getString("checkInterval")?.let(Duration.Companion::parseIsoString) ?: 1.minutes,
+				store = parseResult.getString("store")?.toHttpUrl() ?: "https://store.ui.com".toHttpUrl(),
+				items = parseItems(requireNotNull(parseResult.getArray("items")) { "Missing required 'items' array" })
+			)
 		}
-	}
-}
 
-private object IsoDurationSerializer : KSerializer<Duration> {
-	override val descriptor = PrimitiveSerialDescriptor("kotlin.time.Duration", STRING)
-
-	override fun deserialize(decoder: Decoder): Duration {
-		return Duration.parseIsoString(decoder.decodeString())
-	}
-
-	override fun serialize(encoder: Encoder, value: Duration) {
-		throw UnsupportedOperationException()
-	}
-}
-
-private object HttpUrlSerializer : KSerializer<HttpUrl> {
-	override val descriptor = PrimitiveSerialDescriptor("okhttp3.HttpUrl", STRING)
-
-	override fun deserialize(decoder: Decoder): HttpUrl {
-		return decoder.decodeString().toHttpUrl()
-	}
-
-	override fun serialize(encoder: Encoder, value: HttpUrl) {
-		throw UnsupportedOperationException()
+		private fun parseItems(array: TomlArray) = buildList<String> {
+			require(array.containsStrings()) { "'items' array must contain only strings" }
+			for (i in 0 until array.size()) {
+				add(array.getString(i))
+			}
+		}
 	}
 }

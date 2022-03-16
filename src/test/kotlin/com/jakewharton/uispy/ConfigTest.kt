@@ -1,6 +1,5 @@
 package com.jakewharton.uispy
 
-import com.akuleshov7.ktoml.exceptions.TomlDecodingException
 import com.google.common.truth.Truth.assertThat
 import kotlin.test.assertFailsWith
 import kotlin.time.Duration.Companion.seconds
@@ -9,10 +8,43 @@ import org.junit.Test
 
 class ConfigTest {
 	@Test fun itemsRequired() {
-		val t = assertFailsWith<TomlDecodingException> {
+		val t = assertFailsWith<IllegalArgumentException> {
 			Config.parseToml("")
 		}
-		assertThat(t).hasMessageThat().contains("Missing required property <items>")
+		assertThat(t).hasMessageThat().contains("Missing required 'items' array")
+	}
+
+	@Test fun itemsOneLine() {
+		val config = Config.parseToml(
+			"""
+				|items = [ "hey", "there", "bud" ]
+				|""".trimMargin()
+		)
+		assertThat(config.items).containsExactly("hey", "there", "bud")
+	}
+
+	@Test fun itemsMultilineLine() {
+		val config = Config.parseToml(
+			"""
+				|items = [
+				|  "hey",
+				|  "there",
+				|  "bud",
+				|]
+				|""".trimMargin()
+		)
+		assertThat(config.items).containsExactly("hey", "there", "bud")
+	}
+
+	@Test fun itemsMustBeStrings() {
+		val t = assertFailsWith<IllegalArgumentException> {
+			Config.parseToml(
+				"""
+				|items = [ 1, 2, 3 ]
+				|""".trimMargin()
+			)
+		}
+		assertThat(t).hasMessageThat().isEqualTo("'items' array must contain only strings")
 	}
 
 	@Test fun iftttValidUrl() {
