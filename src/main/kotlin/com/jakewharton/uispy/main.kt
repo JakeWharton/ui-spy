@@ -5,14 +5,15 @@ package com.jakewharton.uispy
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.help
-import com.github.ajalt.clikt.parameters.arguments.multiple
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.switch
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.minutes
+import com.github.ajalt.clikt.parameters.types.path
+import java.nio.file.FileSystem
+import java.nio.file.FileSystems
+import kotlin.io.path.readText
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
@@ -25,22 +26,13 @@ import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.logging.HttpLoggingInterceptor.Level.BASIC
 
 fun main(vararg args: String) {
-	UiSpyCommand().main(args)
+	UiSpyCommand(FileSystems.getDefault()).main(args)
 }
 
-private class UiSpyCommand : CliktCommand(name = "ui-spy") {
+private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 	private val debug by option(hidden = true)
 		.switch<Debug>(mapOf("--debug" to Debug.Console))
 		.default(Debug.Disabled)
-
-	private val checkInterval by option("--interval", metavar = "DURATION")
-		.help("Amount of time between checks in ISO8601 duration format (default 1 minute)")
-		.convert { Duration.parseIsoString(it) }
-		.default(1.minutes)
-
-	private val ifttt by option("--ifttt", metavar = "URL")
-		.help("IFTTT webhook URL to trigger (see https://ifttt.com/maker_webhooks)")
-		.convert { it.toHttpUrl() }
 
 	private val healthCheckHost by option("--hc-host", metavar = "URL")
 		.help("Alternate host for health check notification")
@@ -50,9 +42,9 @@ private class UiSpyCommand : CliktCommand(name = "ui-spy") {
 	private val healthCheckId by option("--hc", metavar = "ID")
 		.help("ID of https://healthchecks.io/ to notify")
 
-	private val handles by argument(name = "IDs")
-		.help("Product IDs to watch for availability")
-		.multiple(required = true)
+	private val config by argument("CONFIG")
+		.help("Path to config TOML")
+		.path(fileSystem = fs)
 
 	override fun run() = runBlocking {
 		val okhttp = OkHttpClient.Builder()
@@ -70,13 +62,6 @@ private class UiSpyCommand : CliktCommand(name = "ui-spy") {
 			)
 		} ?: NullHealthCheck
 
-		val notifier = buildList {
-			add(ConsoleProductNotifier)
-			ifttt?.let { ifttt ->
-				add(IftttProductNotifier(okhttp, ifttt))
-			}
-		}.flatten()
-
 		val json = Json {
 			ignoreUnknownKeys = true
 		}
@@ -92,6 +77,15 @@ private class UiSpyCommand : CliktCommand(name = "ui-spy") {
 
 			while (true) {
 				healthCheck.notifyStart()
+
+				val config = Config.parseToml(config.readText())
+
+				val notifier = buildList {
+					add(ConsoleProductNotifier)
+					if (config.ifttt != null) {
+						add(IftttProductNotifier(okhttp, config.ifttt))
+					}
+				}.flatten()
 
 				var success = false
 				try {
@@ -110,7 +104,7 @@ private class UiSpyCommand : CliktCommand(name = "ui-spy") {
 						async { loadProducts("https://store.ui.com/collections/early-access/products.json") },
 					).awaitAll().flatten().associateBy { it.handle }
 
-					val variants = handles.mapNotNull { allProducts[it]?.variants?.first() }
+					val variants = config.items.mapNotNull { allProducts[it]?.variants?.first() }
 					debug.log(variants.toString())
 
 					val allVariantsAvailable = variants.all { it.available }
@@ -128,7 +122,7 @@ private class UiSpyCommand : CliktCommand(name = "ui-spy") {
 					}
 				}
 
-				delay(checkInterval)
+				delay(config.checkInterval)
 			}
 		} finally {
 			okhttp.dispatcher.executorService.shutdown()
