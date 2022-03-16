@@ -16,11 +16,11 @@ class IftttProductNotifierTest {
 		val notifier = IftttProductNotifier(OkHttpClient(), serverUrl)
 
 		server.enqueue(MockResponse())
-		notifier.notify("cool-product", true)
+		notifier.notify("cool-product", "Cool Product", true)
 
 		val request = server.takeRequest()
 		assertThat(request.body.readUtf8())
-			.isEqualTo("""{"value1":"cool-product","value2":"Available","value3":"https://store.ui.com/products/cool-product"}""")
+			.isEqualTo("""{"value1":"Cool Product","value2":"Available","value3":"https://store.ui.com/products/cool-product"}""")
 		assertThat(request.requestUrl).isEqualTo(serverUrl)
 	}
 }

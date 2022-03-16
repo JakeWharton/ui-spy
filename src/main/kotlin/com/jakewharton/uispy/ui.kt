@@ -10,6 +10,7 @@ data class ProductsContainer(
 @Serializable
 data class Product(
 	val handle: String,
+	val title: String,
 	val variants: List<ProductVariant> = emptyList(),
 )
 

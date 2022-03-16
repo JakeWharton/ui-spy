@@ -116,7 +116,7 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 						val thisAvailability = product.variants[0].available
 						if (lastAvailability != thisAvailability) {
 							database.productAvailabilityChange(item, thisAvailability)
-							notifier.notify(item, thisAvailability)
+							notifier.notify(item, product.title, thisAvailability)
 						}
 					}
 
