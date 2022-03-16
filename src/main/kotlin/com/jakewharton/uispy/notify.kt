@@ -10,7 +10,7 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 interface ProductNotifier {
-	suspend fun notify(name: String, available: Boolean, cartUrl: String?)
+	suspend fun notify(handle: String, available: Boolean)
 }
 
 fun List<ProductNotifier>.flatten(): ProductNotifier {
@@ -20,19 +20,19 @@ fun List<ProductNotifier>.flatten(): ProductNotifier {
 private class CompositeProductNotifier(
 	private val productNotifiers: List<ProductNotifier>,
 ) : ProductNotifier {
-	override suspend fun notify(name: String, available: Boolean, cartUrl: String?) {
+	override suspend fun notify(handle: String, available: Boolean) {
 		for (productNotifier in productNotifiers) {
-			productNotifier.notify(name, available, cartUrl)
+			productNotifier.notify(handle, available)
 		}
 	}
 }
 
 object ConsoleProductNotifier : ProductNotifier {
-	override suspend fun notify(name: String, available: Boolean, cartUrl: String?) {
+	override suspend fun notify(handle: String, available: Boolean) {
 		if (available) {
-			println("[$name] AVAILABLE! ${cartUrl.orEmpty()}")
+			println("[$handle] AVAILABLE!")
 		} else {
-			println("[$name] UNAVAILABLE")
+			println("[$handle] UNAVAILABLE")
 		}
 	}
 }
@@ -41,11 +41,11 @@ class IftttProductNotifier(
 	private val okhttp: OkHttpClient,
 	private val url: HttpUrl,
 ) : ProductNotifier {
-	override suspend fun notify(name: String, available: Boolean, cartUrl: String?) {
+	override suspend fun notify(handle: String, available: Boolean) {
 		val body = PostBody(
-			value1 = name,
+			value1 = handle,
 			value2 = if (available) "Available" else "Unavailable",
-			value3 = cartUrl,
+			value3 = "https://store.ui.com/products/$handle",
 		)
 		val call = okhttp.newCall(Request.Builder().url(url).post(body.toJson()).build())
 		call.await()

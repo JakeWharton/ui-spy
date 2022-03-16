@@ -7,6 +7,7 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.arguments.help
 import com.github.ajalt.clikt.parameters.options.convert
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.defaultLazy
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.switch
@@ -46,6 +47,13 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 		.help("Path to config TOML")
 		.path(fileSystem = fs)
 
+	@Suppress("USELESS_CAST") // Needed to keep the type abstract.
+	private val database by option("--data", metavar = "PATH")
+		.help("Directory into which available products are tracked (default in-memory)")
+		.path(canBeFile = false, fileSystem = fs)
+		.convert { FileSystemDatabase(it) as Database }
+		.defaultLazy { InMemoryDatabase() }
+
 	override fun run() = runBlocking {
 		val okhttp = OkHttpClient.Builder()
 			.apply {
@@ -73,8 +81,6 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 		}
 
 		try {
-			var available: Boolean? = null
-
 			while (true) {
 				healthCheck.notifyStart()
 
@@ -89,7 +95,7 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 
 				var success = false
 				try {
-					val allProducts = listOf(
+					val products = listOf(
 						async { loadProducts("https://store.ui.com/collections/unifi-network-unifi-os-consoles/products.json") },
 						async { loadProducts("https://store.ui.com/collections/unifi-network-switching/products.json") },
 						async { loadProducts("https://store.ui.com/collections/unifi-network-routing-offload/products.json") },
@@ -104,13 +110,14 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 						async { loadProducts("https://store.ui.com/collections/early-access/products.json") },
 					).awaitAll().flatten().associateBy { it.handle }
 
-					val variants = config.items.mapNotNull { allProducts[it]?.variants?.first() }
-					debug.log(variants.toString())
-
-					val allVariantsAvailable = variants.all { it.available }
-					if (allVariantsAvailable != available) {
-						available = allVariantsAvailable
-						notifier.notify("Items", allVariantsAvailable, null)
+					for (item in config.items) {
+						val product = products[item] ?: continue // TODO error!
+						val lastAvailability = database.isProductAvailable(item)
+						val thisAvailability = product.variants[0].available
+						if (lastAvailability != thisAvailability) {
+							database.productAvailabilityChange(item, thisAvailability)
+							notifier.notify(item, thisAvailability)
+						}
 					}
 
 					success = true
