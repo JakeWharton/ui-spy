@@ -50,4 +50,22 @@ class ConfigTest {
 		}
 		assertThat(t).hasMessageThat().isEqualTo("Invalid ISO duration string format: 'hello there!'.")
 	}
+
+	@Test fun storeValidUrl() {
+		val config = Config.parseToml("""
+			|store = "https://example.com/stuff"
+			|items = []
+			|""".trimMargin())
+		assertThat(config.store).isEqualTo("https://example.com/stuff".toHttpUrl())
+	}
+
+	@Test fun storeInvalidUrl() {
+		val t = assertFailsWith<IllegalArgumentException> {
+			Config.parseToml("""
+				|store = "hello there!"
+				|items = []
+				|""".trimMargin())
+		}
+		assertThat(t).hasMessageThat().isEqualTo("Expected URL scheme 'http' or 'https' but no colon was found")
+	}
 }
