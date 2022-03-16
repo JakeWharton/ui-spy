@@ -74,12 +74,6 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 			ignoreUnknownKeys = true
 		}
 
-		suspend fun loadProducts(url: String): List<Product> {
-			val productsJson = okhttp.newCall(Request.Builder().url(url).build()).await()
-			val allProducts = json.decodeFromString(ProductsContainer.serializer(), productsJson)
-			return allProducts.products
-		}
-
 		try {
 			while (true) {
 				healthCheck.notifyStart()
@@ -93,21 +87,28 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 					}
 				}.flatten()
 
+				suspend fun loadProducts(url: String): List<Product> {
+					val storeUrl = config.store.resolve(url)!!
+					val productsJson = okhttp.newCall(Request.Builder().url(storeUrl).build()).await()
+					val allProducts = json.decodeFromString(ProductsContainer.serializer(), productsJson)
+					return allProducts.products
+				}
+
 				var success = false
 				try {
 					val products = listOf(
-						async { loadProducts("https://store.ui.com/collections/unifi-network-unifi-os-consoles/products.json") },
-						async { loadProducts("https://store.ui.com/collections/unifi-network-switching/products.json") },
-						async { loadProducts("https://store.ui.com/collections/unifi-network-routing-offload/products.json") },
-						async { loadProducts("https://store.ui.com/collections/unifi-network-wireless/products.json") },
-						async { loadProducts("https://store.ui.com/collections/unifi-protect/products.json") },
-						async { loadProducts("https://store.ui.com/collections/unifi-door-access/products.json") },
-						async { loadProducts("https://store.ui.com/collections/unifi-accessories/products.json") },
-						async { loadProducts("https://store.ui.com/collections/unifi-connect/products.json") },
-						async { loadProducts("https://store.ui.com/collections/unifi-phone-system/products.json") },
-						async { loadProducts("https://store.ui.com/collections/operator-airmax-and-ltu/products.json") },
-						async { loadProducts("https://store.ui.com/collections/operator-isp-infrastructure/products.json") },
-						async { loadProducts("https://store.ui.com/collections/early-access/products.json") },
+						async { loadProducts("collections/unifi-network-unifi-os-consoles/products.json") },
+						async { loadProducts("collections/unifi-network-switching/products.json") },
+						async { loadProducts("collections/unifi-network-routing-offload/products.json") },
+						async { loadProducts("collections/unifi-network-wireless/products.json") },
+						async { loadProducts("collections/unifi-protect/products.json") },
+						async { loadProducts("collections/unifi-door-access/products.json") },
+						async { loadProducts("collections/unifi-accessories/products.json") },
+						async { loadProducts("collections/unifi-connect/products.json") },
+						async { loadProducts("collections/unifi-phone-system/products.json") },
+						async { loadProducts("collections/operator-airmax-and-ltu/products.json") },
+						async { loadProducts("collections/operator-isp-infrastructure/products.json") },
+						async { loadProducts("collections/early-access/products.json") },
 					).awaitAll().flatten().associateBy { it.handle }
 
 					for (item in config.items) {
@@ -116,7 +117,11 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 						val thisAvailability = product.variants[0].available
 						if (lastAvailability != thisAvailability) {
 							database.productAvailabilityChange(item, thisAvailability)
-							notifier.notify(item, product.title, thisAvailability)
+							val url = config.store.newBuilder()
+								.addPathSegment("products")
+								.addPathSegment(item)
+								.build()
+							notifier.notify(url, product.title, thisAvailability)
 						}
 					}
 

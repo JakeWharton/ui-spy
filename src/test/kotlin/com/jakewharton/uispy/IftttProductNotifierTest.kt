@@ -2,6 +2,7 @@ package com.jakewharton.uispy
 
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -16,7 +17,7 @@ class IftttProductNotifierTest {
 		val notifier = IftttProductNotifier(OkHttpClient(), serverUrl)
 
 		server.enqueue(MockResponse())
-		notifier.notify("cool-product", "Cool Product", true)
+		notifier.notify("https://store.ui.com/products/cool-product".toHttpUrl(), "Cool Product", true)
 
 		val request = server.takeRequest()
 		assertThat(request.body.readUtf8())

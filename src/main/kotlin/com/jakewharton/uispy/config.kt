@@ -18,6 +18,8 @@ data class Config(
 	val ifttt: HttpUrl? = null,
 	@Serializable(IsoDurationSerializer::class)
 	val checkInterval: Duration = 1.minutes,
+	@Serializable(HttpUrlSerializer::class)
+	val store: HttpUrl = "https://store.ui.com".toHttpUrl(),
 	val items: List<String>,
 ) {
 	companion object {
