@@ -11,7 +11,7 @@ data class Config(
 	val ifttt: HttpUrl? = null,
 	val checkInterval: Duration = 1.minutes,
 	val store: HttpUrl = "https://store.ui.com".toHttpUrl(),
-	val items: List<String>,
+	val productVariants: List<ProductVariant>,
 ) {
 	companion object {
 		fun parseToml(toml: String): Config {
@@ -23,15 +23,23 @@ data class Config(
 				ifttt = parseResult.getString("ifttt")?.toHttpUrl(),
 				checkInterval = parseResult.getString("checkInterval")?.let(Duration.Companion::parseIsoString) ?: 1.minutes,
 				store = parseResult.getString("store")?.toHttpUrl() ?: "https://store.ui.com".toHttpUrl(),
-				items = parseItems(requireNotNull(parseResult.getArray("items")) { "Missing required 'items' array" })
+				productVariants = parseItems(requireNotNull(parseResult.getArray("products")) { "Missing required 'products' array" })
 			)
 		}
 
-		private fun parseItems(array: TomlArray) = buildList<String> {
-			require(array.containsStrings()) { "'items' array must contain only strings" }
+		private fun parseItems(array: TomlArray) = buildList {
+			require(array.containsStrings()) { "'products' array must contain only strings" }
 			for (i in 0 until array.size()) {
-				add(array.getString(i))
+				val entry = array.getString(i)
+				require(entry.isNotBlank()) { "Product string must not be blank" }
+				val parts = entry.split('@', limit = 2)
+				add(ProductVariant(parts[0], parts.getOrNull(1)?.toLong()))
 			}
 		}
 	}
+
+	data class ProductVariant(
+		val handle: String,
+		val variantId: Long? = null,
+	)
 }

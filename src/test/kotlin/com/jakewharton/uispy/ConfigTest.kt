@@ -7,50 +7,75 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Test
 
 class ConfigTest {
-	@Test fun itemsRequired() {
+	@Test fun productsRequired() {
 		val t = assertFailsWith<IllegalArgumentException> {
 			Config.parseToml("")
 		}
-		assertThat(t).hasMessageThat().contains("Missing required 'items' array")
+		assertThat(t).hasMessageThat().contains("Missing required 'products' array")
 	}
 
-	@Test fun itemsOneLine() {
+	@Test fun productsOneLine() {
 		val config = Config.parseToml(
 			"""
-				|items = [ "hey", "there", "bud" ]
+				|products = [ "hey", "there", "bud" ]
 				|""".trimMargin()
 		)
-		assertThat(config.items).containsExactly("hey", "there", "bud")
+		assertThat(config.productVariants).containsExactly(
+			Config.ProductVariant("hey"),
+			Config.ProductVariant("there"),
+			Config.ProductVariant("bud"),
+		)
 	}
 
-	@Test fun itemsMultilineLine() {
+	@Test fun productsMultilineLine() {
 		val config = Config.parseToml(
 			"""
-				|items = [
+				|products = [
 				|  "hey",
 				|  "there",
 				|  "bud",
 				|]
 				|""".trimMargin()
 		)
-		assertThat(config.items).containsExactly("hey", "there", "bud")
+		assertThat(config.productVariants).containsExactly(
+			Config.ProductVariant("hey"),
+			Config.ProductVariant("there"),
+			Config.ProductVariant("bud"),
+		)
 	}
 
-	@Test fun itemsMustBeStrings() {
+	@Test fun productsWithVariants() {
+		val config = Config.parseToml(
+			"""
+				|products = [
+				|  "hey",
+				|  "there@123",
+				|  "bud",
+				|]
+				|""".trimMargin()
+		)
+		assertThat(config.productVariants).containsExactly(
+			Config.ProductVariant("hey"),
+			Config.ProductVariant("there", 123),
+			Config.ProductVariant("bud"),
+		)
+	}
+
+	@Test fun productsMustBeStrings() {
 		val t = assertFailsWith<IllegalArgumentException> {
 			Config.parseToml(
 				"""
-				|items = [ 1, 2, 3 ]
+				|products = [ 1, 2, 3 ]
 				|""".trimMargin()
 			)
 		}
-		assertThat(t).hasMessageThat().isEqualTo("'items' array must contain only strings")
+		assertThat(t).hasMessageThat().isEqualTo("'products' array must contain only strings")
 	}
 
 	@Test fun iftttValidUrl() {
 		val config = Config.parseToml("""
 			|ifttt = "https://example.com/stuff"
-			|items = []
+			|products = []
 			|""".trimMargin())
 		assertThat(config.ifttt).isEqualTo("https://example.com/stuff".toHttpUrl())
 	}
@@ -59,7 +84,7 @@ class ConfigTest {
 		val t = assertFailsWith<IllegalArgumentException> {
 			Config.parseToml("""
 				|ifttt = "hello there!"
-				|items = []
+				|products = []
 				|""".trimMargin())
 		}
 		assertThat(t).hasMessageThat().isEqualTo("Expected URL scheme 'http' or 'https' but no colon was found")
@@ -68,7 +93,7 @@ class ConfigTest {
 	@Test fun checkIntervalValidDuration() {
 		val config = Config.parseToml("""
 			|checkInterval = "PT10S"
-			|items = []
+			|products = []
 			|""".trimMargin())
 		assertThat(config.checkInterval).isEqualTo(10.seconds)
 	}
@@ -77,7 +102,7 @@ class ConfigTest {
 		val t = assertFailsWith<IllegalArgumentException> {
 			Config.parseToml("""
 				|checkInterval = "hello there!"
-				|items = []
+				|products = []
 				|""".trimMargin())
 		}
 		assertThat(t).hasMessageThat().isEqualTo("Invalid ISO duration string format: 'hello there!'.")
@@ -86,7 +111,7 @@ class ConfigTest {
 	@Test fun storeValidUrl() {
 		val config = Config.parseToml("""
 			|store = "https://example.com/stuff"
-			|items = []
+			|products = []
 			|""".trimMargin())
 		assertThat(config.store).isEqualTo("https://example.com/stuff".toHttpUrl())
 	}
@@ -95,7 +120,7 @@ class ConfigTest {
 		val t = assertFailsWith<IllegalArgumentException> {
 			Config.parseToml("""
 				|store = "hello there!"
-				|items = []
+				|products = []
 				|""".trimMargin())
 		}
 		assertThat(t).hasMessageThat().isEqualTo("Expected URL scheme 'http' or 'https' but no colon was found")

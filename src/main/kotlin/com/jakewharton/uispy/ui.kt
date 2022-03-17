@@ -9,13 +9,15 @@ data class ProductsContainer(
 
 @Serializable
 data class Product(
+	val id: Long,
 	val handle: String,
 	val title: String,
-	val variants: List<ProductVariant> = emptyList(),
-)
-
-@Serializable
-data class ProductVariant(
-	val product_id: Long,
-	val available: Boolean = false,
-)
+	val variants: List<Variant> = emptyList(),
+) {
+	@Serializable
+	data class Variant(
+		val id: Long,
+		val title: String,
+		val available: Boolean = false,
+	)
+}

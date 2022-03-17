@@ -7,20 +7,21 @@ import kotlin.io.path.deleteExisting
 import kotlin.io.path.exists
 
 interface Database {
-	fun isProductAvailable(handle: String): Boolean
-	fun productAvailabilityChange(handle: String, available: Boolean)
+	fun isProductAvailable(productId: Long, variantId: Long?): Boolean
+	fun productAvailabilityChange(productId: Long, variantId: Long?, available: Boolean)
 }
 
 class InMemoryDatabase : Database {
-	private val handles = mutableSetOf<String>()
+	private val keys = mutableSetOf<String>()
 
-	override fun isProductAvailable(handle: String) = handle in handles
+	override fun isProductAvailable(productId: Long, variantId: Long?) = "$productId-$variantId" in keys
 
-	override fun productAvailabilityChange(handle: String, available: Boolean) {
+	override fun productAvailabilityChange(productId: Long, variantId: Long?, available: Boolean) {
+		val key = "$productId-$variantId"
 		if (available) {
-			handles += handle
+			keys += key
 		} else {
-			handles -= handle
+			keys -= key
 		}
 	}
 }
@@ -30,12 +31,12 @@ class FileSystemDatabase(private val root: Path) : Database {
 		root.createDirectories()
 	}
 
-	override fun isProductAvailable(handle: String): Boolean {
-		return path(handle).exists()
+	override fun isProductAvailable(productId: Long, variantId: Long?): Boolean {
+		return path(productId, variantId).exists()
 	}
 
-	override fun productAvailabilityChange(handle: String, available: Boolean) {
-		val handlePath = path(handle)
+	override fun productAvailabilityChange(productId: Long, variantId: Long?, available: Boolean) {
+		val handlePath = path(productId, variantId)
 		if (available) {
 			handlePath.createFile()
 		} else {
@@ -43,5 +44,8 @@ class FileSystemDatabase(private val root: Path) : Database {
 		}
 	}
 
-	private fun path(handle: String) = root.resolve(handle)
+	private fun path(productId: Long, variantId: Long?): Path {
+		val file = if (variantId != null) "$productId-$variantId" else "$productId"
+		return root.resolve(file)
+	}
 }

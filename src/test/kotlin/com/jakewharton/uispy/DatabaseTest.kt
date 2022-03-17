@@ -16,18 +16,29 @@ class DatabaseTest(
 	private val database: Database,
 ) {
 	@Test fun defaultAvailabilityIsFalse() {
-		assertFalse(database.isProductAvailable("cool-product"))
-		assertFalse(database.isProductAvailable("another-one"))
+		assertFalse(database.isProductAvailable(123, null))
+		assertFalse(database.isProductAvailable(456, 789))
 	}
 
-	@Test fun availabilityReflectsChange() {
-		assertFalse(database.isProductAvailable("cool-product"))
+	@Test fun availabilityReflectsChangeNoVariant() {
+		assertFalse(database.isProductAvailable(123, null))
 
-		database.productAvailabilityChange("cool-product", true)
-		assertTrue(database.isProductAvailable("cool-product"))
+		database.productAvailabilityChange(123, null, true)
+		assertTrue(database.isProductAvailable(123, null))
 
-		database.productAvailabilityChange("cool-product", false)
-		assertFalse(database.isProductAvailable("cool-product"))
+		database.productAvailabilityChange(123, null, false)
+		assertFalse(database.isProductAvailable(123, null))
+	}
+
+	@Test fun availabilityReflectsChangeWithVariant() {
+		assertFalse(database.isProductAvailable(123, 456))
+
+		// Changing a different variant which should not affect the one we want.
+		database.productAvailabilityChange(123, 789, true)
+		assertFalse(database.isProductAvailable(123, 456))
+
+		database.productAvailabilityChange(123, 456, true)
+		assertTrue(database.isProductAvailable(123, 456))
 	}
 
 	companion object {

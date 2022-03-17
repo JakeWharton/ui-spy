@@ -111,17 +111,36 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 						async { loadProducts("collections/early-access/products.json") },
 					).awaitAll().flatten().associateBy { it.handle }
 
-					for (item in config.items) {
-						val product = products[item] ?: continue // TODO error!
-						val lastAvailability = database.isProductAvailable(item)
-						val thisAvailability = product.variants[0].available
+					for (productVariant in config.productVariants) {
+						val product = products[productVariant.handle] ?: continue // TODO error!
+						val variant = if (productVariant.variantId != null) {
+							product.variants.firstOrNull { it.id == productVariant.variantId } ?: continue // TODO error!
+						} else {
+							null
+						}
+
+						val lastAvailability = database.isProductAvailable(product.id, variant?.id)
+						val thisAvailability = variant?.available ?: product.variants.any { it.available }
 						if (lastAvailability != thisAvailability) {
-							database.productAvailabilityChange(item, thisAvailability)
+							database.productAvailabilityChange(product.id, variant?.id, thisAvailability)
+
 							val url = config.store.newBuilder()
 								.addPathSegment("products")
-								.addPathSegment(item)
+								.addPathSegment(product.handle)
+								.apply {
+									if (variant != null) {
+										addQueryParameter("variant", variant.id.toString())
+									}
+								}
 								.build()
-							notifier.notify(url, product.title, thisAvailability)
+
+							val name = if (variant != null) {
+								"${product.title} [${variant.title}]"
+							} else {
+								product.title
+							}
+
+							notifier.notify(url, name, thisAvailability)
 						}
 					}
 
