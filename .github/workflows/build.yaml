@@ -1,11 +1,17 @@
 name: build
 
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches:
+      - '**'
+      - '!trunk'
+    tags-ignore:
+      - '**'
 
 jobs:
-  build:
+  gradle:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
       - uses: gradle/wrapper-validation-action@v1
@@ -21,3 +27,12 @@ jobs:
           name: ui-spy.zip
           path: build/distributions/ui-spy.zip
           if-no-files-found: error
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: gradle/wrapper-validation-action@v1
+      - run: docker build .
+        env:
+          DOCKER_BUILDKIT: 1
