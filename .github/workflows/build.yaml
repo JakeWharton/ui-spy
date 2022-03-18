@@ -33,6 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: gradle/wrapper-validation-action@v1
-      - run: docker build .
+      - run: docker build -t ui-spy .
         env:
           DOCKER_BUILDKIT: 1
+
+      - name: Smoke test Docker container
+        run: docker run ui-spy --help

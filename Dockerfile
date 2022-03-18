@@ -58,4 +58,5 @@ ENV JAVA_HOME="/jre"
 
 COPY --from=build /app/build/install/ui-spy/ /app
 
-ENTRYPOINT ["/app/bin/ui-spy", "/config/config.toml"]
+ENTRYPOINT ["/app/bin/ui-spy"]
+CMD ["--data", "/data", "/config/config.toml"]

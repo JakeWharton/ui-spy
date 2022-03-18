@@ -35,12 +35,12 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 		.switch<Debug>(mapOf("--debug" to Debug.Console))
 		.default(Debug.Disabled)
 
-	private val healthCheckHost by option("--hc-host", metavar = "URL")
+	private val healthCheckHost by option("--hc-host", metavar = "URL", envvar = "HEALTHCHECK_HOST")
 		.help("Alternate host for health check notification")
 		.convert { it.toHttpUrl() }
 		.default("https://hc-ping.com".toHttpUrl())
 
-	private val healthCheckId by option("--hc", metavar = "ID")
+	private val healthCheckId by option("--hc", metavar = "ID", envvar = "HEALTCHECK_ID")
 		.help("ID of https://healthchecks.io/ to notify")
 
 	private val config by argument("CONFIG")
