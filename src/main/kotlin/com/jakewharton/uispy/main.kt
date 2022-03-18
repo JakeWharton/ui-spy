@@ -40,7 +40,7 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 		.convert { it.toHttpUrl() }
 		.default("https://hc-ping.com".toHttpUrl())
 
-	private val healthCheckId by option("--hc", metavar = "ID", envvar = "HEALTCHECK_ID")
+	private val healthCheckId by option("--hc", metavar = "ID", envvar = "HEALTHCHECK_ID")
 		.help("ID of https://healthchecks.io/ to notify")
 
 	private val config by argument("CONFIG")
