@@ -85,7 +85,7 @@ products = [
 # URL of IFTTT webhook to trigger for product availability changes (optional).
 #  Value: Valid URL as string.
 #  Default: none
-ifttt = ""
+ifttt = "https://maker.ifttt.com/trigger/ui-spy/with/key/abc123def456"
 
 # Duration between each check (optional).
 #  Value: ISO 8601 duration string representing a positive value.
