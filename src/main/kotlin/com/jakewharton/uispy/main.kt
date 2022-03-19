@@ -112,15 +112,26 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 					).awaitAll().flatten().associateBy { it.handle }
 
 					for (productVariant in config.productVariants) {
-						val product = products[productVariant.handle] ?: continue // TODO error!
+						val product = products[productVariant.handle]
+						if (product == null) {
+							println("WARNING: No product '${productVariant.handle}'")
+							continue
+						}
+
 						val variant = if (productVariant.variantId != null) {
-							product.variants.firstOrNull { it.id == productVariant.variantId } ?: continue // TODO error!
+							val variant = product.variants.firstOrNull { it.id == productVariant.variantId }
+							if (variant == null) {
+								println("WARNING: No variant ${productVariant.variantId} for product '${productVariant.handle}'")
+							}
+							variant
 						} else {
 							null
 						}
 
 						val lastAvailability = database.isProductAvailable(product.id, variant?.id)
 						val thisAvailability = variant?.available ?: product.variants.any { it.available }
+						debug.log("[$productVariant] last:$lastAvailability this:$thisAvailability")
+
 						if (lastAvailability != thisAvailability) {
 							database.productAvailabilityChange(product.id, variant?.id, thisAvailability)
 

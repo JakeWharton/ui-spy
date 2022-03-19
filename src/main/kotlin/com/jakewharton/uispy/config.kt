@@ -41,5 +41,11 @@ data class Config(
 	data class ProductVariant(
 		val handle: String,
 		val variantId: Long? = null,
-	)
+	) {
+		override fun toString() = if (variantId != null) {
+			"$handle@$variantId"
+		} else {
+			handle
+		}
+	}
 }
