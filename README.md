@@ -63,7 +63,7 @@ To be notified when the tool is failing visit https://healthchecks.io, create a 
 ```yaml
 version: '2'
 services:
-  posterbox:
+  ui-spy:
     image: jakewharton/ui-spy
     restart: unless-stopped
     volumes:
