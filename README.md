@@ -82,7 +82,8 @@ products = [
   "udm-pro",
 ]
 
-# URL of IFTTT webhook to trigger for product availability changes (optional).
+# URL of IFTTT webhook to trigger for product availability changes (optional). If not specified, the
+# tool will only log product availability changes to the console.
 #  Value: Valid URL as string.
 #  Default: none
 ifttt = "https://maker.ifttt.com/trigger/ui-spy/with/key/abc123def456"
