@@ -1,6 +1,8 @@
 # UI Spy
 
-Monitor the [Ubiquiti Store](https://store.ui.com) for product availability.
+Monitor products on the [Ubiquiti Store](https://store.ui.com) and receive notifications when their availability changes.
+
+![Example usage showing a Slack notification from IFTTT that the G3 Instant camera is now available.](ui-spy.png)
 
 Available as a binary and Docker container.
 
