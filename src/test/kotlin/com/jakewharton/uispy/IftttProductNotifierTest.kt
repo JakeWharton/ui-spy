@@ -17,7 +17,7 @@ class IftttProductNotifierTest {
 		val notifier = IftttProductNotifier(OkHttpClient(), serverUrl)
 
 		server.enqueue(MockResponse())
-		notifier.notify("https://store.ui.com/products/cool-product".toHttpUrl(), "Cool Product", true)
+		notifier.availabilityChange("https://store.ui.com/products/cool-product".toHttpUrl(), "Cool Product", true)
 
 		val request = server.takeRequest()
 		assertThat(request.body.readUtf8())

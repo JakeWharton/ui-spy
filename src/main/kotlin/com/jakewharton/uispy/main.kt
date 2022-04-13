@@ -154,14 +154,27 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 								product.title
 							}
 
-							notifier.notify(url, name, thisAvailability)
+							notifier.availabilityChange(url, name, thisAvailability)
 						}
 					}
 
-					val removedProducts = database.allProducts()
-						.minus(products.values.map { it.id })
-					for (removedProduct in removedProducts) {
-						database.removeProduct(removedProduct)
+					// Notify of new products and clean up removed products (only if this isn't first run).
+					val knownProductIds = database.allProducts()
+					if (knownProductIds.isNotEmpty()) {
+						val activeProductIds = products.values.associateBy { it.id }
+
+						for (addedProductId in activeProductIds.keys - knownProductIds) {
+							val addedProduct = activeProductIds.getValue(addedProductId)
+							val url = config.store.newBuilder()
+								.addPathSegment("products")
+								.addPathSegment(addedProduct.handle)
+								.build()
+							notifier.added(url, addedProduct.title, addedProduct.variants.any { it.available })
+						}
+
+						for (removedProductId in knownProductIds - activeProductIds.keys) {
+							database.removeProduct(removedProductId)
+						}
 					}
 
 					for (product in products.values) {
