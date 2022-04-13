@@ -15,14 +15,11 @@ import com.github.ajalt.clikt.parameters.types.path
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import kotlin.io.path.readText
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.logging.HttpLoggingInterceptor.Level.BASIC
 
@@ -55,7 +52,7 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 		.defaultLazy { InMemoryDatabase() }
 
 	override fun run() = runBlocking {
-		val okhttp = OkHttpClient.Builder()
+		val okHttp = OkHttpClient.Builder()
 			.apply {
 				if (debug.enabled) {
 					addNetworkInterceptor(HttpLoggingInterceptor(debug::log).setLevel(BASIC))
@@ -65,7 +62,7 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 
 		val healthCheck = healthCheckId?.let { healthCheckId ->
 			HttpHealthCheck(
-				okhttp = okhttp,
+				okhttp = okHttp,
 				checkUrl = healthCheckHost.newBuilder().addPathSegment(healthCheckId).build(),
 			)
 		} ?: NullHealthCheck
@@ -83,105 +80,15 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 				val notifier = buildList {
 					add(ConsoleProductNotifier)
 					if (config.ifttt != null) {
-						add(IftttProductNotifier(okhttp, config.ifttt))
+						add(IftttProductNotifier(okHttp, config.ifttt))
 					}
 				}.flatten()
 
-				suspend fun loadProducts(url: String): List<Product> {
-					val storeUrl = config.store.resolve(url)!!
-					val productsJson = okhttp.newCall(Request.Builder().url(storeUrl).build()).await()
-					val allProducts = json.decodeFromString(ProductsContainer.serializer(), productsJson)
-					return allProducts.products
-				}
+				val spy = UiSpy(okHttp, config, jsonLinks, notifier, database, debug)
 
 				var success = false
 				try {
-					val products = listOf(
-						async { loadProducts("collections/unifi-network-unifi-os-consoles/products.json") },
-						async { loadProducts("collections/unifi-network-switching/products.json") },
-						async { loadProducts("collections/unifi-network-routing-offload/products.json") },
-						async { loadProducts("collections/unifi-network-wireless/products.json") },
-						async { loadProducts("collections/unifi-protect/products.json") },
-						async { loadProducts("collections/unifi-door-access/products.json") },
-						async { loadProducts("collections/unifi-accessories/products.json") },
-						async { loadProducts("collections/unifi-connect/products.json") },
-						async { loadProducts("collections/unifi-phone-system/products.json") },
-						async { loadProducts("collections/operator-airmax-and-ltu/products.json") },
-						async { loadProducts("collections/operator-isp-infrastructure/products.json") },
-						async { loadProducts("collections/early-access/products.json") },
-					).awaitAll().flatten().associateBy { it.handle }
-
-					for (productVariant in config.productVariants) {
-						val product = products[productVariant.handle]
-						if (product == null) {
-							println("WARNING: No product '${productVariant.handle}'")
-							continue
-						}
-						val productAvailability = database.getProductAvailability(product.id)
-						val lastAvailability = if (productVariant.variantId == null) {
-							productAvailability.anyVariantAvailable()
-						} else {
-							productAvailability.isVariantAvailable(productVariant.variantId)
-						}
-
-						val variant = if (productVariant.variantId != null) {
-							val variant = product.variants.firstOrNull { it.id == productVariant.variantId }
-							if (variant == null) {
-								println("WARNING: No variant ${productVariant.variantId} for product '${productVariant.handle}'")
-							}
-							variant
-						} else {
-							null
-						}
-						val thisAvailability = variant?.available ?: product.variants.any { it.available }
-
-						debug.log("[$productVariant] last:$lastAvailability this:$thisAvailability")
-
-						if (lastAvailability != thisAvailability) {
-							val url = config.store.newBuilder()
-								.addPathSegment("products")
-								.addPathSegment(product.handle)
-								.apply {
-									if (variant != null) {
-										addQueryParameter("variant", variant.id.toString())
-									}
-								}
-								.build()
-
-							val name = if (variant != null) {
-								"${product.title} [${variant.title}]"
-							} else {
-								product.title
-							}
-
-							notifier.availabilityChange(url, name, thisAvailability)
-						}
-					}
-
-					// Notify of new products and clean up removed products (only if this isn't first run).
-					val knownProductIds = database.allProducts()
-					if (knownProductIds.isNotEmpty()) {
-						val activeProductIds = products.values.associateBy { it.id }
-
-						for (addedProductId in activeProductIds.keys - knownProductIds) {
-							val addedProduct = activeProductIds.getValue(addedProductId)
-							val url = config.store.newBuilder()
-								.addPathSegment("products")
-								.addPathSegment(addedProduct.handle)
-								.build()
-							notifier.added(url, addedProduct.title, addedProduct.variants.any { it.available })
-						}
-
-						for (removedProductId in knownProductIds - activeProductIds.keys) {
-							database.removeProduct(removedProductId)
-						}
-					}
-
-					for (product in products.values) {
-						val availability =
-							ProductAvailability(product.variants.associate { it.id to it.available })
-						database.updateProductAvailability(product.id, availability)
-					}
+					spy.check()
 
 					success = true
 				} finally {
@@ -195,8 +102,25 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 				delay(config.checkInterval)
 			}
 		} finally {
-			okhttp.dispatcher.executorService.shutdown()
-			okhttp.connectionPool.evictAll()
+			okHttp.dispatcher.executorService.shutdown()
+			okHttp.connectionPool.evictAll()
 		}
+	}
+
+	companion object {
+		val jsonLinks = listOf(
+			"collections/unifi-network-unifi-os-consoles/products.json",
+			"collections/unifi-network-switching/products.json",
+			"collections/unifi-network-routing-offload/products.json",
+			"collections/unifi-network-wireless/products.json",
+			"collections/unifi-protect/products.json",
+			"collections/unifi-door-access/products.json",
+			"collections/unifi-accessories/products.json",
+			"collections/unifi-connect/products.json",
+			"collections/unifi-phone-system/products.json",
+			"collections/operator-airmax-and-ltu/products.json",
+			"collections/operator-isp-infrastructure/products.json",
+			"collections/early-access/products.json",
+		)
 	}
 }
