@@ -12,6 +12,7 @@ data class Config(
 	val checkInterval: Duration = 1.minutes,
 	val store: HttpUrl = "https://store.ui.com".toHttpUrl(),
 	val productVariants: List<ProductVariant>,
+	val productAddNotifications: Boolean = false,
 ) {
 	companion object {
 		fun parseToml(toml: String): Config {
@@ -23,7 +24,8 @@ data class Config(
 				ifttt = parseResult.getString("ifttt")?.toHttpUrl(),
 				checkInterval = parseResult.getString("checkInterval")?.let(Duration.Companion::parseIsoString) ?: 1.minutes,
 				store = parseResult.getString("store")?.toHttpUrl() ?: "https://store.ui.com".toHttpUrl(),
-				productVariants = parseItems(requireNotNull(parseResult.getArray("products")) { "Missing required 'products' array" })
+				productVariants = parseItems(requireNotNull(parseResult.getArray("products")) { "Missing required 'products' array" }),
+				productAddNotifications = parseResult.getBoolean("productAddNotifications") ?: false,
 			)
 		}
 

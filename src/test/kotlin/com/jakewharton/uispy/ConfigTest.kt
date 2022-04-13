@@ -5,6 +5,7 @@ import kotlin.test.assertFailsWith
 import kotlin.time.Duration.Companion.seconds
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Test
+import org.tomlj.TomlInvalidTypeException
 
 class ConfigTest {
 	@Test fun productsRequired() {
@@ -124,5 +125,23 @@ class ConfigTest {
 				|""".trimMargin())
 		}
 		assertThat(t).hasMessageThat().isEqualTo("Expected URL scheme 'http' or 'https' but no colon was found")
+	}
+
+	@Test fun productAddNotificationsValid() {
+		val config = Config.parseToml("""
+			|productAddNotifications = true
+			|products = []
+			|""".trimMargin())
+		assertThat(config.productAddNotifications).isTrue()
+	}
+
+	@Test fun productAddNotificationsInvalid() {
+		val t = assertFailsWith<TomlInvalidTypeException> {
+			Config.parseToml("""
+				|productAddNotifications = "cheese"
+				|products = []
+				|""".trimMargin())
+		}
+		assertThat(t).hasMessageThat().isEqualTo("Value of 'productAddNotifications' is a string")
 	}
 }

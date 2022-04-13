@@ -10,7 +10,8 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
 interface ProductNotifier {
-	suspend fun notify(url: HttpUrl, name: String, available: Boolean)
+	suspend fun added(url: HttpUrl, name: String, available: Boolean)
+	suspend fun availabilityChange(url: HttpUrl, name: String, available: Boolean)
 }
 
 fun List<ProductNotifier>.flatten(): ProductNotifier {
@@ -20,15 +21,26 @@ fun List<ProductNotifier>.flatten(): ProductNotifier {
 private class CompositeProductNotifier(
 	private val productNotifiers: List<ProductNotifier>,
 ) : ProductNotifier {
-	override suspend fun notify(url: HttpUrl, name: String, available: Boolean) {
+	override suspend fun added(url: HttpUrl, name: String, available: Boolean) {
 		for (productNotifier in productNotifiers) {
-			productNotifier.notify(url, name, available)
+			productNotifier.added(url, name, available)
+		}
+	}
+
+	override suspend fun availabilityChange(url: HttpUrl, name: String, available: Boolean) {
+		for (productNotifier in productNotifiers) {
+			productNotifier.availabilityChange(url, name, available)
 		}
 	}
 }
 
 object ConsoleProductNotifier : ProductNotifier {
-	override suspend fun notify(url: HttpUrl, name: String, available: Boolean) {
+	override suspend fun added(url: HttpUrl, name: String, available: Boolean) {
+		val availability = if (available) "Available" else "Unavailable"
+		println("ADDED: $name $url ($availability)")
+	}
+
+	override suspend fun availabilityChange(url: HttpUrl, name: String, available: Boolean) {
 		if (available) {
 			println("AVAILABLE: $name $url")
 		} else {
@@ -41,7 +53,17 @@ class IftttProductNotifier(
 	private val okhttp: OkHttpClient,
 	private val url: HttpUrl,
 ) : ProductNotifier {
-	override suspend fun notify(url: HttpUrl, name: String, available: Boolean) {
+	override suspend fun added(url: HttpUrl, name: String, available: Boolean) {
+		val body = PostBody(
+			value1 = name,
+			value2 = "Added (${if (available) "Available" else "Unavailable"})",
+			value3 = url.toString(),
+		)
+		val call = okhttp.newCall(Request.Builder().url(this.url).post(body.toJson()).build())
+		call.await()
+	}
+
+	override suspend fun availabilityChange(url: HttpUrl, name: String, available: Boolean) {
 		val body = PostBody(
 			value1 = name,
 			value2 = if (available) "Available" else "Unavailable",
