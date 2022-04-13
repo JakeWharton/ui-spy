@@ -117,6 +117,12 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 							println("WARNING: No product '${productVariant.handle}'")
 							continue
 						}
+						val productAvailability = database.getProductAvailability(product.id)
+						val lastAvailability = if (productVariant.variantId == null) {
+							productAvailability.anyVariantAvailable()
+						} else {
+							productAvailability.isVariantAvailable(productVariant.variantId)
+						}
 
 						val variant = if (productVariant.variantId != null) {
 							val variant = product.variants.firstOrNull { it.id == productVariant.variantId }
@@ -127,14 +133,11 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 						} else {
 							null
 						}
-
-						val lastAvailability = database.isProductAvailable(product.id, variant?.id)
 						val thisAvailability = variant?.available ?: product.variants.any { it.available }
+
 						debug.log("[$productVariant] last:$lastAvailability this:$thisAvailability")
 
 						if (lastAvailability != thisAvailability) {
-							database.productAvailabilityChange(product.id, variant?.id, thisAvailability)
-
 							val url = config.store.newBuilder()
 								.addPathSegment("products")
 								.addPathSegment(product.handle)
@@ -153,6 +156,18 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 
 							notifier.notify(url, name, thisAvailability)
 						}
+					}
+
+					val removedProducts = database.allProducts()
+						.minus(products.values.map { it.id })
+					for (removedProduct in removedProducts) {
+						database.removeProduct(removedProduct)
+					}
+
+					for (product in products.values) {
+						val availability =
+							ProductAvailability(product.variants.associate { it.id to it.available })
+						database.updateProductAvailability(product.id, availability)
 					}
 
 					success = true
