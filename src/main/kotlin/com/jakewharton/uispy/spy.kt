@@ -74,13 +74,15 @@ class UiSpy(
 		if (knownProductIds.isNotEmpty()) {
 			val activeProductIds = products.values.associateBy { it.id }
 
-			for (addedProductId in activeProductIds.keys - knownProductIds) {
-				val addedProduct = activeProductIds.getValue(addedProductId)
-				val url = config.store.newBuilder()
-					.addPathSegment("products")
-					.addPathSegment(addedProduct.handle)
-					.build()
-				notifier.added(url, addedProduct.title, addedProduct.variants.any { it.available })
+			if (config.productAddNotifications) {
+				for (addedProductId in activeProductIds.keys - knownProductIds) {
+					val addedProduct = activeProductIds.getValue(addedProductId)
+					val url = config.store.newBuilder()
+						.addPathSegment("products")
+						.addPathSegment(addedProduct.handle)
+						.build()
+					notifier.added(url, addedProduct.title, addedProduct.variants.any { it.available })
+				}
 			}
 
 			for (removedProductId in knownProductIds - activeProductIds.keys) {
