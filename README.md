@@ -98,6 +98,11 @@ checkInterval = "PT5M"
 #  Value: Valid URL as string.
 #  Default: "https://store.ui.com"
 store = "https://ca.store.ui.com"
+
+# Whether to also notify when a new product is added (optional).
+#  Value: boolean
+#  Default: false
+productAddNotifications = true
 ```
 
 #### Products and product variants
