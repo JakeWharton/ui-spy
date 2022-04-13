@@ -84,7 +84,7 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 					}
 				}.flatten()
 
-				val spy = UiSpy(okHttp, config, notifier, database, debug)
+				val spy = UiSpy(okHttp, config, jsonLinks, notifier, database, debug)
 
 				var success = false
 				try {
@@ -105,5 +105,22 @@ private class UiSpyCommand(fs: FileSystem) : CliktCommand(name = "ui-spy") {
 			okHttp.dispatcher.executorService.shutdown()
 			okHttp.connectionPool.evictAll()
 		}
+	}
+
+	companion object {
+		val jsonLinks = listOf(
+			"collections/unifi-network-unifi-os-consoles/products.json",
+			"collections/unifi-network-switching/products.json",
+			"collections/unifi-network-routing-offload/products.json",
+			"collections/unifi-network-wireless/products.json",
+			"collections/unifi-protect/products.json",
+			"collections/unifi-door-access/products.json",
+			"collections/unifi-accessories/products.json",
+			"collections/unifi-connect/products.json",
+			"collections/unifi-phone-system/products.json",
+			"collections/operator-airmax-and-ltu/products.json",
+			"collections/operator-isp-infrastructure/products.json",
+			"collections/early-access/products.json",
+		)
 	}
 }

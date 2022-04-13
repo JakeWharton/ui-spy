@@ -10,25 +10,17 @@ import okhttp3.Request
 class UiSpy(
 	private val okHttp: OkHttpClient,
 	private val config: Config,
+	private val jsonLinks: List<String>,
 	private val notifier: ProductNotifier,
 	private val database: Database,
 	private val debug: Debug,
 ) {
 	suspend fun check() = coroutineScope {
-		val products = listOf(
-			async { loadProducts("collections/unifi-network-unifi-os-consoles/products.json") },
-			async { loadProducts("collections/unifi-network-switching/products.json") },
-			async { loadProducts("collections/unifi-network-routing-offload/products.json") },
-			async { loadProducts("collections/unifi-network-wireless/products.json") },
-			async { loadProducts("collections/unifi-protect/products.json") },
-			async { loadProducts("collections/unifi-door-access/products.json") },
-			async { loadProducts("collections/unifi-accessories/products.json") },
-			async { loadProducts("collections/unifi-connect/products.json") },
-			async { loadProducts("collections/unifi-phone-system/products.json") },
-			async { loadProducts("collections/operator-airmax-and-ltu/products.json") },
-			async { loadProducts("collections/operator-isp-infrastructure/products.json") },
-			async { loadProducts("collections/early-access/products.json") },
-		).awaitAll().flatten().associateBy { it.handle }
+		val products = jsonLinks
+			.map { async { loadProducts(it) } }
+			.awaitAll()
+			.flatten()
+			.associateBy { it.handle }
 
 		for (productVariant in config.productVariants) {
 			val product = products[productVariant.handle]
