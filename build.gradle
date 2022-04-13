@@ -50,7 +50,7 @@ tasks.withType(org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompile).configureEach {
 		jvmTarget = '1.8'
 		freeCompilerArgs += [
 				'-progressive',
-				'-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi',
+				'-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi',
 		]
 	}
 }
