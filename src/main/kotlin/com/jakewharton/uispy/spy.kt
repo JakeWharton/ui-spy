@@ -4,6 +4,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -49,16 +50,7 @@ class UiSpy(
 			debug.log("[$productVariant] last:$lastAvailability this:$thisAvailability")
 
 			if (lastAvailability != thisAvailability) {
-				val url = config.store.newBuilder()
-					.addPathSegment("products")
-					.addPathSegment(product.handle)
-					.apply {
-						if (variant != null) {
-							addQueryParameter("variant", variant.id.toString())
-						}
-					}
-					.build()
-
+				val url = productUrl(product, variant)
 				val name = if (variant != null) {
 					"${product.title} [${variant.title}]"
 				} else {
@@ -77,10 +69,7 @@ class UiSpy(
 			if (config.productAddNotifications) {
 				for (addedProductId in activeProductIds.keys - knownProductIds) {
 					val addedProduct = activeProductIds.getValue(addedProductId)
-					val url = config.store.newBuilder()
-						.addPathSegment("products")
-						.addPathSegment(addedProduct.handle)
-						.build()
+					val url = productUrl(addedProduct)
 					notifier.added(url, addedProduct.title, addedProduct.variants.any { it.available })
 				}
 			}
@@ -95,6 +84,21 @@ class UiSpy(
 				ProductAvailability(product.variants.associate { it.id to it.available })
 			database.updateProductAvailability(product.id, availability)
 		}
+	}
+
+	private fun productUrl(
+		product: Product,
+		variant: Product.Variant? = null,
+	): HttpUrl {
+		return config.store.newBuilder()
+			.addPathSegment("products")
+			.addPathSegment(product.handle)
+			.apply {
+				if (variant != null) {
+					addQueryParameter("variant", variant.id.toString())
+				}
+			}
+			.build()
 	}
 
 	private suspend fun loadProducts(url: String): List<Product> {
