@@ -88,7 +88,7 @@ class ConfigTest {
 				|products = []
 				|""".trimMargin())
 		}
-		assertThat(t).hasMessageThat().isEqualTo("Expected URL scheme 'http' or 'https' but no colon was found")
+		assertThat(t).hasMessageThat().startsWith("Expected URL scheme 'http' or 'https' but no scheme was found")
 	}
 
 	@Test fun checkIntervalValidDuration() {
@@ -124,7 +124,7 @@ class ConfigTest {
 				|products = []
 				|""".trimMargin())
 		}
-		assertThat(t).hasMessageThat().isEqualTo("Expected URL scheme 'http' or 'https' but no colon was found")
+		assertThat(t).hasMessageThat().startsWith("Expected URL scheme 'http' or 'https' but no scheme was found")
 	}
 
 	@Test fun productAddNotificationsValid() {
