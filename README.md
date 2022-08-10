@@ -2,6 +2,8 @@
 
 Monitor products on the [Ubiquiti Store](https://store.ui.com) and receive notifications when their availability changes.
 
+**!!! WARNING !!!** As of July 22nd, 2022 this tool is **currently broken** as Ubiquiti migrated their store to new infrastructure.
+
 ![Example usage showing a Slack notification from IFTTT that the G3 Instant camera is now available.](ui-spy.png)
 
 Available as a binary and Docker container.
