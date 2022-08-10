@@ -51,7 +51,7 @@ RUN jlink \
       --add-modules $(cat jdeps.txt) \
    ;
 
-FROM alpine:3.16.1
+FROM alpine:3.16.2
 
 COPY --from=build /app/jre /jre
 ENV JAVA_HOME="/jre"
