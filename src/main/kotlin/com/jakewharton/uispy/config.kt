@@ -30,9 +30,9 @@ data class Config(
 		}
 
 		private fun parseItems(array: TomlArray) = buildList {
-			require(array.containsStrings()) { "'products' array must contain only strings" }
 			for (i in 0 until array.size()) {
-				val entry = array.getString(i)
+				val entry = array.get(i)
+				require(entry is String) { "'products' array must contain only strings" }
 				require(entry.isNotBlank()) { "Product string must not be blank" }
 				val parts = entry.split('@', limit = 2)
 				add(ProductVariant(parts[0], parts.getOrNull(1)?.toLong()))
