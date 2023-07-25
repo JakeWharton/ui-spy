@@ -18,7 +18,7 @@ dependencies {
 	def okhttpVersion = '4.11.0'
 	def kotlinxSerializationVersion = '1.5.1'
 
-	implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2'
+	implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
 	implementation "org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion"
 	implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion"
 	implementation 'org.tomlj:tomlj:1.1.0'
