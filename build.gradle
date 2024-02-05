@@ -3,8 +3,8 @@ buildscript {
 		mavenCentral()
 	}
 	dependencies {
-		classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.21'
-		classpath 'org.jetbrains.kotlin:kotlin-serialization:1.9.21'
+		classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22'
+		classpath 'org.jetbrains.kotlin:kotlin-serialization:1.9.22'
 	}
 }
 
@@ -21,14 +21,14 @@ dependencies {
 	implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
 	implementation "org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion"
 	implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion"
-	implementation 'org.tomlj:tomlj:1.1.0'
+	implementation 'org.tomlj:tomlj:1.1.1'
 	implementation 'org.jetbrains.kotlinx:kotlinx-datetime:0.5.0'
-	implementation 'com.github.ajalt.clikt:clikt:4.2.1'
+	implementation 'com.github.ajalt.clikt:clikt:4.2.2'
 	implementation "com.squareup.okhttp3:okhttp:$okhttpVersion"
 	implementation "com.squareup.okhttp3:logging-interceptor:$okhttpVersion"
 
 	testImplementation 'junit:junit:4.13.2'
-	testImplementation 'com.google.truth:truth:1.1.5'
+	testImplementation 'com.google.truth:truth:1.3.0'
 	testImplementation 'com.google.jimfs:jimfs:1.3.0'
 	testImplementation "com.squareup.okhttp3:mockwebserver:$okhttpVersion"
 	testImplementation 'org.jetbrains.kotlin:kotlin-test'
